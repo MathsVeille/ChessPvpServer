@@ -23,6 +23,7 @@ console.log("listening onnnn " + 3001);
 
 const sockets = new Set();
 const players = new Map(); //[key: id, value: {piece: letypedelapiece, x:current_x, z:current_z, x_change: Xchange_wanted, z_change: Zchange_wanted}]
+const cases = new Map(); //[key:numero_case, id:id_du_joeurs_occupant_la_case/null si vide] 
 
 //on s'est connecté
 io.on("connection", (socket)=>{
@@ -33,9 +34,9 @@ io.on("connection", (socket)=>{
         
     });
 
-    players.set(socket.id, {piece: 1, x:1, z:1, x_change:0, z_change:0});
+    //players.set(socket.id, {piece: 1, x:1, z:1, x_change:0, z_change:0});
 
-    socket.broadcast.emit("new_player", {id:socket.id, x:1, z:1});
+    //socket.broadcast.emit("new_player", {id:socket.id, x:1, z:1});
     
     console.log("new player " + socket.id);
     console.log(players);
@@ -49,6 +50,11 @@ io.on("connection", (socket)=>{
 
         socket.broadcast.emit("desired_player_pos", socket.id, desiredPos.x, desiredPos.z); 
         console.log("broadcasted:" + socket.id + " x: "+desiredPos.x + " z: "+ desiredPos.z);
+    });
+
+    socket.on("player_init", (x, z)=>{
+        players.set(socket.id, {x:x, z:z, x_change:0, z_change:0});
+        socket.broadcast.emit("new_player", {id:socket.id, x:x, z:z});
     });
 
     
@@ -76,7 +82,7 @@ function gameLoop(){
     //GAME LOOP CODE////////////////////////////////////
 
     //on met à jour le tableau interne des positions des joeurs
-    console.log("Delta "+delta);
+    //console.log("Delta "+delta);
     players.forEach((value, key)=>{
         if(value.x_change != 0){
             console.log(value.x);
@@ -110,15 +116,16 @@ function gameLoop(){
     if(accumulator > 2){
         let syncArray = [];
         players.forEach((value, key)=>{
-            syncArray.push({id:key, x:value.x, y:value.y, x_change:value.x_change, y_change:value.y_change});
+            syncArray.push({id:key, x:value.x, z:value.z, x_change:value.x_change, z_change:value.z_change});
         })
 
         
         sockets.forEach((sock) => {
             sock.emit("sync", syncArray);
         });
-        accumulator -= 2;
+        accumulator -= 10;
         console.log("Synchro");
+        console.log(syncArray);
     }
     accumulator += delta;
     //////////////////////////////////////////////////////////
